@@ -67,7 +67,7 @@ options:
     --filter=<filter>
         Comma separated list of available attributes
 
-        The <filter> should follow the sintax: <attr><operator><value>.
+        The <filter> should follow the syntax: <attr><operator><value>.
         For example: --filter='publishedon>20240220' will filter images published after 20240220.
 
         Attributes and their available operators:
