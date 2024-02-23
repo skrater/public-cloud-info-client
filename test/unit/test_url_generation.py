@@ -27,9 +27,11 @@ def test_api_version():
     assert_equals('v1', ifsrequest.__get_api_version())
 
 
-def test_get_base_url():
-    expected = 'https://susepubliccloudinfo.suse.com'
-    assert_equals(expected, ifsrequest.__get_base_url())
+def test_form_with_base_url():
+    """Form the URL for all servers in JSON format"""
+    url = ifsrequest.__form_url('amazon', 'servers', 'json', base_url='https://example.com/')
+    expected = 'https://example.com/v1/amazon/servers.json'
+    assert_equals(expected, url)
 
 
 def test_form_url_servers_all_json():

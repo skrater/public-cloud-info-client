@@ -21,20 +21,26 @@
 """
 usage: pint -h | --help
        pint providers
+          [ --url=<url> ]
           [ --json | --xml ]
        pint image_states
+          [ --url=<url> ]
           [ --json | --xml ]
-       pint ({PROVIDERS}) server_types 
+       pint ({PROVIDERS}) server_types
+          [ --url=<url> ]
           [ --json | --xml ]
        pint ({PROVIDERS}) regions
+          [ --url=<url> ]
           [ --filter=<filter> ]
           [ --json | --xml ]
        pint ({PROVIDERS}) servers
+          [ --url=<url> ]
           [ --filter=<filter> ]
           [ --json | --xml ]
           [ --region=<region> ]
           [ --smt | --regionserver ]
        pint ({PROVIDERS}) images
+          [ --url=<url> ]
           [ --active | --inactive | --deleted | --deprecated ]
           [ --filter=<filter> ]
           [ --json | --xml ]
@@ -42,35 +48,71 @@ usage: pint -h | --help
        pint -v | --version
 
 options:
-   -h --help
-       Show help
-   --active
-       Only include images which are actively maintained
-   --deleted
-       Only include images which have been deleted
-   --deprecated
-       Only include images which are deprecated
-       (scheduled for deletion in 6 months)
-   --filter=<filter>
-       Comma separated list of available attributes
-   --inactive
-       Only include images which are inactive
-       (only receiving critical updates, but not yet deprecated)
-   --json
-       Output data in JSON format
-   --region=<region>
-       Provide information for regions given in comma separated list,
-       if omitted all regions are included
-   --regionserver
-       Provide only Region Server information
-   --smt
-       Provide only SMT Server information
-   --xml
-       Output data in XML format
-   -v --version
-       Show program version
+    -h --help
+        Show help
 
-For Additional help run `man pint` to view the man page       
+    --active
+        Only include images which are actively maintained
+
+    --url=<url>
+        Change server base URL to query results from [default: {URL}]
+
+    --deleted
+        Only include images which have been deleted
+
+    --deprecated
+        Only include images which are deprecated
+        (scheduled for deletion in 6 months)
+
+    --filter=<filter>
+        Comma separated list of available attributes
+
+        The <filter> should follow the sintax: <attr><operator><value>.
+        For example: --filter='publishedon>20240220' will filter images published after 20240220.
+
+        Attributes and their available operators:
+            id: =
+            replacementid: =
+            ip: =
+            name: ~!%
+            replacementname: ~!%
+            publishedon: <=>
+            deprecatedon: <=>
+            deletedon: <=>
+            type: ~!%
+
+        Operators :
+            = Equality
+            > Greater than
+            < Smaller than
+            ~ Python compatible Regex
+            ! Substring is absent from attribute
+            % Substring is present in attribute
+
+    --inactive
+        Only include images which are inactive
+        (only receiving critical updates, but not yet deprecated)
+
+    --json
+        Output data in JSON format
+
+    --region=<region>
+        Provide information for regions given in comma separated list,
+        if omitted all regions are included
+
+    --regionserver
+        Provide only Region Server information
+
+    --smt
+        Provide only SMT Server information
+
+    --xml
+        Output data in XML format
+
+    -v --version
+        Show program version
+
+For Additional help run `man pint` to view the man page
 """
 
 import json
@@ -81,29 +123,37 @@ from docopt import docopt
 import susepubliccloudinfoclient.infoserverrequests as ifsrequest
 import susepubliccloudinfoclient.version as version
 
-try:
-    provider_data = ifsrequest.get_provider_data(
-        None, None, 'json', 'all', None
-    )
-except Exception:
-    print('Unable to contact pint server')
-    sys.exit(1)
-try:
-    providers = json.loads(provider_data)
-except json.decoder.JSONDecodeError:
-    print('Unable to load supported frameworks from server')
-    print('Received: "%s"' % provider_data)
+def _get_providers():
+    try:
+        provider_data = ifsrequest.get_provider_data(
+            None, None, 'json', 'all', None
+        )
+    except Exception:
+        return ["alibaba", "amazon", "google", "microsoft", "oracle"]
 
-cloud_providers = []
-for provider in providers['providers']:
-    cloud_providers.append(provider['name'])
+    try:
+        providers = json.loads(provider_data)
+    except json.decoder.JSONDecodeError:
+        print('Unable to load supported frameworks from server')
+        print('Received: "%s"' % provider_data)
+
+    cloud_providers = []
+    for provider in providers['providers']:
+        cloud_providers.append(provider['name'])
+
+    return cloud_providers
+
+cloud_providers = _get_providers()
 
 command_args = docopt(
     __doc__.format(
-        PROVIDERS = "|".join(cloud_providers)
+        PROVIDERS = "|".join(cloud_providers),
+        URL=ifsrequest.DEFAULT_URL,
     ),
     version=version.VERSION
 )
+
+base_url = command_args['--url']
 
 framework = None
 for csp in cloud_providers:
@@ -113,7 +163,7 @@ for csp in cloud_providers:
 
 image_state = None
 image_states_data = ifsrequest.get_image_states_data(
-    None, None, 'json', None
+    None, None, 'json', None, base_url=base_url
 )
 try:
     image_state_info = json.loads(image_states_data)
@@ -155,7 +205,8 @@ try:
             image_state,
             output_format,
             region,
-            command_args['--filter'])
+            command_args['--filter'],
+            base_url=base_url)
         if '<images/>' in data or '"images": []' in data:
             data = 'No information available. Please check your filter'
         print(data)
@@ -165,39 +216,44 @@ try:
             server_type,
             output_format,
             region,
-            command_args['--filter']))
+            command_args['--filter'],
+            base_url=base_url))
     elif command_args['providers']:
         print(ifsrequest.get_provider_data(
             framework,
             server_type,
             output_format,
             region,
-            command_args['--filter']))
+            command_args['--filter'],
+            base_url=base_url))
     elif command_args['image_states']:
+        print(base_url)
         print(ifsrequest.get_image_states_data(
             framework,
             server_type,
             output_format,
             region,
-            command_args['--filter']))
+            command_args['--filter'],
+            base_url=base_url))
     elif command_args['server_types']:
         print(ifsrequest.get_server_types_data(
             framework,
             server_type,
             output_format,
             region,
-            command_args['--filter']))
+            command_args['--filter'],
+            base_url=base_url))
     else:
         regions = ifsrequest.get_regions_data(
             framework,
             server_type,
             output_format,
             region,
-            command_args['--filter'])
+            command_args['--filter'],
+            base_url=base_url)
         if '<regions/>' in regions or '"regions": []' in regions:
             regions = ('No region information available. Images have '
                        'the same identifier in all regions')
         print(regions)
-            
 except Exception:
     sys.exit(1)
