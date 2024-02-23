@@ -28,7 +28,7 @@ def test_api_version():
 
 
 def test_form_with_base_url():
-    """Form the URL for all servers in JSON format"""
+    """Form the URL using a custom base_url"""
     url = ifsrequest.__form_url('amazon', 'servers', 'json', base_url='https://example.com/')
     expected = 'https://example.com/v1/amazon/servers.json'
     assert_equals(expected, url)

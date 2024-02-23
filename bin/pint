@@ -81,7 +81,7 @@ options:
             deletedon: <=>
             type: ~!%
 
-        Operators :
+        Operators:
             = Equality
             > Greater than
             < Smaller than
