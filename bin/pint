@@ -20,6 +20,7 @@
 #
 """
 usage: pint -h | --help
+       pint --help-filter
        pint providers
           [ --url=<url> ]
           [ --json | --xml ]
@@ -50,69 +51,104 @@ usage: pint -h | --help
 options:
     -h --help
         Show help
-
     --active
         Only include images which are actively maintained
-
     --url=<url>
         Change server base URL to query results from [default: {URL}]
-
     --deleted
         Only include images which have been deleted
-
     --deprecated
         Only include images which are deprecated
         (scheduled for deletion in 6 months)
-
     --filter=<filter>
         Comma separated list of available attributes
-
-        The <filter> should follow the syntax: <attr><operator><value>.
-        For example: --filter='publishedon>20240220' will filter images published after 20240220.
-
-        Attributes and their available operators:
-            id: =
-            replacementid: =
-            ip: =
-            name: ~!%
-            replacementname: ~!%
-            publishedon: <=>
-            deprecatedon: <=>
-            deletedon: <=>
-            type: ~!%
-
-        Operators:
-            = Equality
-            > Greater than
-            < Smaller than
-            ~ Python compatible Regex
-            ! Substring is absent from attribute
-            % Substring is present in attribute
-
+    --help-filter
+        Show detailed help for filter option
     --inactive
         Only include images which are inactive
         (only receiving critical updates, but not yet deprecated)
-
     --json
         Output data in JSON format
-
     --region=<region>
         Provide information for regions given in comma separated list,
         if omitted all regions are included
-
     --regionserver
         Provide only Region Server information
-
     --smt
         Provide only SMT Server information
-
     --xml
         Output data in XML format
-
     -v --version
         Show program version
 
 For Additional help run `man pint` to view the man page
+"""
+
+help_filter = """
+    Filter result using result attributes and operators.
+
+    The filter option should follow the syntax: --filter=<attr><operator><value>.
+
+    Available Operators:
+        = Equality
+        > Greater than (works only for numbers)
+        < Smaller than (works only for numbers)
+        % Python compatible Regex
+        ! Substring is absent from attribute
+        ~ Substring is present in attribute
+
+    Attributes:
+        id:
+            Value: string
+            Operators: =
+
+        replacementid:
+            Value: string
+            Operators: =
+
+        ip:
+            Value: IPv4 string with the format 0.0.0.0
+            Operators: =
+
+        name:
+            Value: string
+            Operators: ~ ! %
+
+        replacementname:
+            Value: string
+            Operators: ~ ! %
+
+        publishedon:
+            Value: number (with date format 20240220)
+            Operators: < = >
+
+        deprecatedon:
+            Value: number (with date format 20240220)
+            Operators: < = >
+
+        deletedon:
+            Value: number (with date format 20240220)
+            Operators: < = >
+
+        type:
+            Value: string
+            Operators: ~ ! %
+
+    Examples:
+        --filter='publishedon>20240220' filters images published after 20240220
+        --filter='id=1' filters images with id equals to 1
+        --filter='ip=1.2.3.4' filters IP equals to 1.2.3.4
+        --filter='name%^suse-sles-sap-12.*' return names that start with suse-sles-sap-12
+        --filter='name~suse-sles-sap-12' return names with substring suse-sles-sap-12
+        --filter='name!suse-sles-sap-12' return names without substring suse-sles-sap-12
+
+    You can combine filters separating them by comma, the order of filter execution is
+    the same as the input. Every filter will increase restriction acting as an AND.
+
+    --filter='publishedon>20240220,name~suse-sles-sap-12' published after 20240220 with substring suse-sles-sap-12 in the name
+
+    Be aware that not every filter is available for every kind of data requested, filters that don't match any attribute
+    will result in the entire result set to be filtered.
 """
 
 import json
@@ -152,6 +188,10 @@ command_args = docopt(
     ),
     version=version.VERSION
 )
+
+if command_args['--help-filter']:
+    print(help_filter)
+    sys.exit(0)
 
 base_url = command_args['--url']
 
